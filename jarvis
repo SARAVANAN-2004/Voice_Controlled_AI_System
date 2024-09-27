@@ -1,0 +1,197 @@
+import pyttsx3
+import datetime
+import speech_recognition as sr
+import wikipedia
+import smtplib
+import webbrowser as wb
+import os
+import pyautogui
+import http.client
+import json
+from urllib.parse import urlencode
+import pywhatkit as kit
+from time import sleep
+import psutil
+import pyjokes
+
+
+
+engine = pyttsx3.init()
+
+
+def speak(audio):
+    engine.say(audio)
+    engine.runAndWait()
+
+def time():
+    time = datetime.datetime.now().strftime("%I:%M:%S")
+    speak("the current time is")
+    speak(time)
+
+def date():
+    year = int(datetime.datetime.now().year)
+    month = int(datetime.datetime.now().month)
+    date = int(datetime.datetime.now().day)
+    speak("the current date is")
+    speak(date)
+    speak(month)
+    speak(year)
+
+def wishme():
+    speak("welcome back sir")
+    time()
+    date()
+    hour = datetime.datetime.now().hour
+    if (hour>=6) and hour<12:
+        speak("good morning sir")
+    elif (hour>12) and hour<18:
+        speak("good afternoon sir")
+    elif (hour>18) and hour<24:
+        speak("good evening sir")
+    else:
+        speak("good night")
+    speak("jarvis is at your service.please tell how can i help you")
+
+def takecommand():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("listening.........")
+        r.pause_threshold = 1
+        audio = r.listen(source)
+
+    try:
+        print("Recongnizing.......")
+        query = r.recognize_google(audio, language = 'en-in')
+        print(query)
+
+    except Exception as e:
+        print(e)
+        speak("unable to recognize")
+        speak("please say that again")
+
+        return "None"
+    return query
+
+def sendmail(to,content):
+
+    server = smtplib.SMTP('smtp.gmail.com',587)
+    server.ehlo()
+    server.starttls()
+    server.login("mail","passcode")
+    server.sendmail("male",to,content)
+    server.close()
+
+def get_weather():
+    conn = http.client.HTTPSConnection("api.openweathermap.org")
+    payload = urlencode({
+        "q": "Chennai",
+        "appid": 'd25a5d952861b7e37cf619c0b2ce4c42',
+        "units": "metric"
+    })
+
+    headers = {'Content-Type': 'application/json'}
+
+    conn.request("GET", f"/data/2.5/weather?{payload}", headers=headers)
+
+    res = conn.getresponse()
+    data = res.read().decode("utf-8")
+
+    weather_data = json.loads(data)
+
+    if res.status == 200:
+        weather_main = weather_data['weather'][0]['main']
+        weather_description = weather_data['weather'][0]['description']
+        temperature = weather_data['main']['temp']
+
+        return f"Weather in chennai: {weather_main}, {weather_description}. Temperature: {temperature}°C"
+    else:
+        return "Unable to retrieve weather data."
+
+def screenshot():
+    img = pyautogui.screenshot()
+    img.save("C:\\Users\\Saravanan G\\PycharmProjects\\pythonadvancedconcept\\venv\\ss.png")
+
+
+def cpu():
+    usage = str(psutil.cpu_percent())
+    speak("cpu is at"+ usage)
+    battery = psutil.sensors_battery()
+    speak("battery is at")
+    speak(battery.percent)
+
+def joke():
+    speak(pyjokes.get_joke())
+
+if __name__ == "__main__":
+    wishme()
+    while True:
+        query = takecommand().lower()
+        if "time" in query:
+            time()
+        elif "date" in query:
+            date()
+        elif "wikipedia" in query:
+            speak("it is searching.....")
+            query = query.replace("wikipedia","")
+            result = wikipedia.summary(query, sentences = 2)
+            print(result)
+            speak(result)
+        elif "mail"in query:
+            try:
+                speak("what should i say")
+                content = takecommand()
+                to = "saravanansenthik@gmail.com"
+                sendmail(to,content)
+                print(content)
+                print("email has been sent!")
+                speak("email has been sent!")
+            except Exception as e:
+                print(e)
+                speak("unable to send email")
+        elif "search" in query:
+            speak("what should i search")
+            search= takecommand().lower()
+            print("searching...")
+            speak("searching...")
+            wb.open_new_tab("https://www."+search+".com")
+        elif 'logout' in query:
+            os.system("shutdown -l")
+        elif 'shutdown' in query:
+            os.system("shutdown /s /t 1")
+        elif 'restart' in query:
+            os.system("shutdown /r /t 0")
+        elif 'play song' in query:
+            songs_dir = 'C:\music'
+            songs = os.listdir(songs_dir)
+            print("playing song...")
+            speak("playing song...")
+            os.startfile(os.path.join(songs_dir,songs[5]))
+        elif 'weather' in query:
+            print(get_weather())
+            speak(get_weather())
+        elif "remember that" in query:
+            speak("what should i remember")
+            data = takecommand().lower()
+            speak(f"you said me to remember that {data}")
+            remember = open("data.txt","w")
+            remember.write(data)
+            remember.close()
+        elif 'do you know anything' in query:
+            remember = open("data.txt","r")
+            speak(f"you said to remember that {remember.read()}")
+        elif 'screenshot' in query:
+            screenshot()
+            speak("done!")
+        elif "play on youtube" in query:
+            speak("tell me the title of the video")
+            title = takecommand().lower()
+            speak(f"playing {title} on youtube")
+            kit.playonyt(title)
+            quit()
+        elif 'cpu' in query:
+            cpu()
+
+        elif 'joke' in query:
+            joke()
+        elif "offline" in query:
+            quit()
